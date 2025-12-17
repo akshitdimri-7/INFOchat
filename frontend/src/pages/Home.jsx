@@ -155,29 +155,21 @@ const Home = () => {
 
     const userMessage = prompt;
     setPrompt("");
-
     let activeChatId = currentChatId;
 
-    // 0. Auto-create chat if none exists
+    // Auto-create chat
     if (!activeChatId) {
-      const res = await fetch(`${server}/api/chat/new`, {
-        method: "POST",
-      });
-
+      const res = await fetch(`${server}/api/chat/new`, { method: "POST" });
       const data = await res.json();
-
-      const newChat = {
-        id: data.chatId,
-        title: "New Chat",
-        messages: [],
-      };
-
-      setChats((prev) => [newChat, ...prev]);
+      setChats((prev) => [
+        { id: data.chatId, title: "New Chat", messages: [] },
+        ...prev,
+      ]);
       setCurrentChatId(data.chatId);
       activeChatId = data.chatId;
     }
 
-    // 1. Add user message + Thinking...
+    // Optimistic update (batched)
     setChats((prev) =>
       prev.map((chat) =>
         chat.id === activeChatId
@@ -201,44 +193,25 @@ const Home = () => {
       const res = await fetch(`${server}/api/chat/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId: activeChatId,
-          message: userMessage,
-        }),
+        body: JSON.stringify({ chatId: activeChatId, message: userMessage }),
       });
 
-      // OVERLOAD CASE (503)
-      if (res.status === 503) {
-        setChats((prev) =>
-          prev.map((chat) =>
-            chat.id === activeChatId
-              ? {
-                  ...chat,
-                  messages: [
-                    ...chat.messages.slice(0, -1), // remove "Thinking..."
-                    {
-                      role: "model",
-                      content:
-                        "Bot is currently overloaded. Please try again later.",
-                    },
-                  ],
-                }
-              : chat
-          )
-        );
-        return;
+      if (!res.ok) {
+        const errorMsg =
+          res.status === 503
+            ? "Bot is currently overloaded. Please try again later."
+            : "Server error. Please try again.";
+        throw new Error(errorMsg);
       }
 
-      // SUCCESS CASE
       const data = await res.json();
-
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === activeChatId
             ? {
                 ...chat,
                 messages: [
-                  ...chat.messages.slice(0, -1), // remove "Thinking..."
+                  ...chat.messages.slice(0, -1),
                   { role: "model", content: data.reply },
                 ],
               }
@@ -246,17 +219,17 @@ const Home = () => {
         )
       );
     } catch (error) {
-      // NETWORK / SERVER DOWN CASE
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === activeChatId
             ? {
                 ...chat,
                 messages: [
-                  ...chat.messages.slice(0, -1), // remove "Thinking..."
+                  ...chat.messages.slice(0, -1),
                   {
                     role: "model",
                     content:
+                      error.message ||
                       "Unable to reach the server. Please try again later.",
                   },
                 ],
