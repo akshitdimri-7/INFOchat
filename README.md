@@ -9,7 +9,7 @@ access the project live: https://infochat-r8t5.onrender.com  (frontend)
                          https://chillchat-videocall-backend.onrender.com  (backend)
 .
 
-also any one can see the demo video at location: **frontend/src/public/demo.mp4**
+also any one can see the demo video at location: **frontend/public/demo.mp4**
 
 
 The focus of this project is **API integration**, file handling, and simple in-memory state management, not advanced AI/ML techniques.
