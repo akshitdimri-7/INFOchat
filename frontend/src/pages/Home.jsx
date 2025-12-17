@@ -207,31 +207,58 @@ const Home = () => {
         }),
       });
 
+      // OVERLOAD CASE (503)
+      if (res.status === 503) {
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === activeChatId
+              ? {
+                  ...chat,
+                  messages: [
+                    ...chat.messages.slice(0, -1), // remove "Thinking..."
+                    {
+                      role: "model",
+                      content:
+                        "Bot is currently overloaded. Please try again later.",
+                    },
+                  ],
+                }
+              : chat
+          )
+        );
+        return;
+      }
+
+      // SUCCESS CASE
       const data = await res.json();
 
-      // 2. Replace Thinking... with real reply
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === activeChatId
             ? {
                 ...chat,
                 messages: [
-                  ...chat.messages.slice(0, -1),
+                  ...chat.messages.slice(0, -1), // remove "Thinking..."
                   { role: "model", content: data.reply },
                 ],
               }
             : chat
         )
       );
-    } catch {
+    } catch (error) {
+      // NETWORK / SERVER DOWN CASE
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === activeChatId
             ? {
                 ...chat,
                 messages: [
-                  ...chat.messages.slice(0, -1),
-                  { role: "model", content: "Something went wrong." },
+                  ...chat.messages.slice(0, -1), // remove "Thinking..."
+                  {
+                    role: "model",
+                    content:
+                      "Unable to reach the server. Please try again later.",
+                  },
                 ],
               }
             : chat
